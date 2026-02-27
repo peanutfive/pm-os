@@ -1,0 +1,19 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+*.swp
+*.swo
+*~
+
+# PRD 文档（本地保留，不上传）
+docs/prds
+
+# 本地 only 文档（brainstorm 等，不上传）
+docs/local-only/
+
+# Cursor 缓存（不忽略 rules 和 skills）
+.cursor/*
+!.cursor/rules/
+!.cursor/skills/
