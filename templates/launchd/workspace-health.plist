@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 唯一标识；改用就同步改文件名（com.klara.workspace-health.plist） -->
+    <key>Label</key>
+    <string>com.klara.workspace-health</string>
+
+    <!-- 要执行的命令 -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/klarachen/developer/pm-os/scripts/workspace-health-check.sh</string>
+    </array>
+
+    <!-- 执行时的工作目录 -->
+    <key>WorkingDirectory</key>
+    <string>/Users/klarachen</string>
+
+    <!--
+      调度：每月 1 号 10:00 执行一次。
+      launchd 的"补跑"语义：如果电脑在预定时间是关机/睡眠/锁屏，醒来后会补跑
+      最近一次错过的触发（只补最新一次，不累积）。这是 launchd 相比 cron 的
+      核心优势，非常适合"不能错过的月检"场景。
+    -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Day</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>10</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <!-- 日志输出（文件会按月加日期后缀是更好的做法，但 launchd 不原生支持，
+         所以这里就覆盖写；需要保留历史就在脚本里自己 tee 到带日期的文件） -->
+    <key>StandardOutPath</key>
+    <string>/Users/klarachen/Library/Logs/workspace-health.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/klarachen/Library/Logs/workspace-health.err</string>
+
+    <!-- 环境：确保脚本能找到 git / gh / brew 等工具 -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <!-- 失败了不要无限重启（默认行为就是不重启，显式写出来提醒自己） -->
+    <key>KeepAlive</key>
+    <false/>
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>
