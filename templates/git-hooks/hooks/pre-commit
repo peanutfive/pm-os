@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# pre-commit — 在允许提交前做自动检查
+# 安装方式：bash ~/developer/pm-os/templates/git-hooks/install.sh
+#
+# 阻断条件（blocker）：
+#   - 追踪 .DS_Store
+#   - 追踪 node_modules / .venv / DerivedData / .build / __pycache__
+#   - 单文件 > 10 MB
+#   - 追踪 .env（非 .example/.sample/.template）
+#   - diff 命中常见 API key 模式（sk-..., AKIA..., ghp_..., xoxb-...）
+#
+# 绕过：git commit --no-verify（除非万不得已不要）
+
+set -u
+
+RED=$'\033[1;31m'
+YELLOW=$'\033[1;33m'
+DIM=$'\033[0;90m'
+RESET=$'\033[0m'
+
+err() { echo "${RED}✗ pre-commit: $*${RESET}" >&2; }
+warn() { echo "${YELLOW}⚠  pre-commit: $*${RESET}" >&2; }
+info() { echo "${DIM}  $*${RESET}" >&2; }
+
+FAIL=0
+
+# 取本次要提交的文件
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$STAGED" ] && exit 0
+
+# 1. .DS_Store
+if echo "$STAGED" | grep -q '\.DS_Store$'; then
+  err "试图提交 .DS_Store："
+  echo "$STAGED" | grep '\.DS_Store$' | while read -r f; do info "→ $f"; done
+  info "修法：git restore --staged <file> && 在 .gitignore 加 '.DS_Store' / '**/.DS_Store'"
+  FAIL=1
+fi
+
+# 2. 大型依赖目录
+for dep in node_modules .venv venv DerivedData .build __pycache__ .swiftpm; do
+  hits=$(echo "$STAGED" | grep "^$dep/\|/$dep/" || true)
+  if [ -n "$hits" ]; then
+    err "试图提交 $dep/ 下的文件（应在 .gitignore 中）："
+    echo "$hits" | head -5 | while read -r f; do info "→ $f"; done
+    [ "$(echo "$hits" | wc -l)" -gt 5 ] && info "… 还有更多"
+    FAIL=1
+  fi
+done
+
+# 3. 单文件 > 10 MB
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  [ -f "$f" ] || continue
+  size=$(wc -c < "$f" 2>/dev/null)
+  [ -z "$size" ] && continue
+  if [ "$size" -gt 10485760 ]; then
+    mb=$((size / 1048576))
+    err "文件过大（${mb} MB）：$f"
+    info "GitHub 单文件建议上限 50 MB，本 hook 限 10 MB 作保守警戒"
+    info "考虑：git-lfs、压缩、或根本不入 git（大多数情况是第三种）"
+    FAIL=1
+  fi
+done <<< "$STAGED"
+
+# 4. .env 文件（但允许 .env.example / .sample / .template）
+env_hits=$(echo "$STAGED" | grep -E '(^|/)\.env(\..+)?$' | grep -vE '\.(example|sample|template)$' || true)
+if [ -n "$env_hits" ]; then
+  err "试图提交 .env 文件（可能含密钥）："
+  echo "$env_hits" | while read -r f; do info "→ $f"; done
+  info "修法：git restore --staged <file> && 加入 .gitignore"
+  info "已不小心提交过的话：git rm --cached <file> 并**轮换密钥**"
+  FAIL=1
+fi
+
+# 5. diff 里的 API key 模式
+secret_patterns='(sk-[a-zA-Z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{30,}|xox[baprs]-[a-zA-Z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN (RSA |OPENSSH )?PRIVATE KEY-----)'
+secret_hits=$(git diff --cached --unified=0 -- $(echo "$STAGED") 2>/dev/null | grep -E "^\+" | grep -oE "$secret_patterns" | head -5 || true)
+if [ -n "$secret_hits" ]; then
+  err "diff 命中疑似密钥模式："
+  echo "$secret_hits" | while read -r k; do
+    # 截断显示，避免在日志里完整泄漏
+    masked="${k:0:12}...${k: -4}"
+    info "→ $masked"
+  done
+  info "修法：移除密钥 → 用环境变量或密钥管理服务 → **轮换密钥**"
+  FAIL=1
+fi
+
+if [ "$FAIL" -eq 1 ]; then
+  echo ""
+  echo "${RED}pre-commit 未通过。修正上述问题后重试。${RESET}"
+  echo "${DIM}紧急绕过（不推荐）：git commit --no-verify${RESET}"
+  exit 1
+fi
+
+exit 0

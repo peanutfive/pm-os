@@ -1,0 +1,52 @@
+# ─── Swift / iOS / Xcode ───
+
+# Xcode build output
+build/
+DerivedData/
+**/DerivedData/
+
+# Xcode user state
+*.xcuserstate
+**/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+**/.build/
+Packages/
+Package.pins
+Package.resolved        # keep this committed if you want pinned versions across machines
+.swiftpm/
+
+# CocoaPods
+Pods/
+*.xcworkspace
+!Package.xcworkspace
+
+# Carthage
+Carthage/Build/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# ─── Vendored Swift packages (if using local path refs, see VENDOR.md) ───
+# vendor/
+
+# ─── Common (macOS / editors / env) ───
+.DS_Store
+**/.DS_Store
+.vscode/
+.idea/
+.cursor/
+.config/
+*.swp
+*.swo
+Thumbs.db
+*.log
+.env
+.env.local

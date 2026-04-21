@@ -1,0 +1,50 @@
+# ─── Python ───
+
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# mypy / pyright
+.mypy_cache/
+.pyright/
+
+# Poetry / pipenv
+# Pipfile.lock   # keep if you want reproducible installs
+# poetry.lock    # keep unless explicitly excluded
+
+# ─── Common (macOS / editors / env) ───
+.DS_Store
+**/.DS_Store
+.vscode/
+.idea/
+.cursor/
+.config/
+*.swp
+*.swo
+Thumbs.db
+*.log
+.env
+.env.local
+.env.*.local

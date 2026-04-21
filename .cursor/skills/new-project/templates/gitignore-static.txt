@@ -1,0 +1,31 @@
+# ─── Static website (HTML / CSS / JS, no build pipeline) ───
+
+# Build output (if using a bundler later)
+dist/
+build/
+out/
+
+# Dependencies (if you later add node tooling)
+node_modules/
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Deploy
+.vercel
+.netlify/
+
+# ─── Common (macOS / editors / env) ───
+.DS_Store
+**/.DS_Store
+.vscode/
+.idea/
+.cursor/
+.config/
+*.swp
+*.swo
+Thumbs.db
+*.log
+.env
+.env.local

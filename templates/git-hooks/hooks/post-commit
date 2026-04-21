@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# post-commit — 提交后的报告 + 迟到的提醒
+# 检查：
+#   - 打印本次提交的简要 stats
+#   - 如果包含 > 1 MB 单文件，提醒（便于提早发现把不该入 git 的大文件误提交）
+#   - 如果一次提交涉及文件数 > 30，提醒（可能是一次 "dump" 式 AI 提交）
+# 仅提示，不影响提交（commit 已经发生）。
+
+GREEN=$'\033[1;32m'
+YELLOW=$'\033[1;33m'
+DIM=$'\033[0;90m'
+RESET=$'\033[0m'
+
+# 取最新 commit 的 stats
+head=$(git rev-parse HEAD 2>/dev/null) || exit 0
+stats=$(git show --stat --format="" "$head" 2>/dev/null | tail -1)
+files_changed=$(echo "$stats" | grep -oE '[0-9]+ files? changed' | awk '{print $1}')
+[ -z "$files_changed" ] && files_changed=0
+
+echo ""
+echo "${GREEN}✓ post-commit: $(git log -1 --format=%h) — $stats${RESET}"
+
+# 大文件警报
+large=$(git show --stat "$head" 2>/dev/null | awk '{ for(i=1;i<=NF;i++) if($i~/^[0-9]+$/ && $i>10000) {print $(i+1)" ("$i" lines)"} }')
+# 上面那个并不严谨，改用真正的文件大小检查
+big_files=$(git diff-tree --no-commit-id --name-only --diff-filter=ACM -r "$head" 2>/dev/null | while read -r f; do
+  [ -f "$f" ] || continue
+  size=$(wc -c < "$f" 2>/dev/null)
+  [ -z "$size" ] && continue
+  if [ "$size" -gt 1048576 ]; then
+    mb=$((size / 1048576))
+    printf "%s %s MB\n" "$f" "$mb"
+  fi
+done)
+
+if [ -n "$big_files" ]; then
+  echo "${YELLOW}⚠  本次提交包含大文件（>1 MB），检查是否该入 git：${RESET}"
+  echo "$big_files" | while read -r l; do echo "${DIM}  → $l${RESET}"; done
+fi
+
+# 批量提交警报
+if [ "$files_changed" -gt 30 ]; then
+  echo "${YELLOW}⚠  一次提交改动 $files_changed 个文件 —— 如果这是 AI 生成的"
+  echo "   '基线 dump'，考虑下次拆成更小粒度方便 review / rollback${RESET}"
+fi
+
+# 如果在 main 上且改动量大，额外提示
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  if [ "$files_changed" -gt 10 ]; then
+    echo "${YELLOW}⚠  在 $branch 上做了较大改动（$files_changed 个文件）"
+    echo "   下次考虑走 feature 分支 + PR 留 review 痕迹${RESET}"
+  fi
+fi
+
+exit 0
